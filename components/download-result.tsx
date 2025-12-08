@@ -42,15 +42,41 @@ export default function DownloadResult({
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const downloadUrl = selectedFormat?.url || url;
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `${title}.${selectedFormat?.ext || 'mp4'}`;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const fileName = `${title.substring(0, 50)}.${selectedFormat?.ext || 'mp4'}`;
+    
+    try {
+      // Show loading state
+      const button = document.querySelector('button[type="download"]');
+      if (button) {
+        button.textContent = 'Đang tải...';
+      }
+
+      // For Cobalt API or direct URLs, try to download via fetch
+      const response = await fetch(downloadUrl);
+      
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download error:', error);
+      // Fallback: open in new tab
+      window.open(downloadUrl, '_blank');
+    }
   };
 
   const mediaTypes = [
