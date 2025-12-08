@@ -28,12 +28,12 @@ interface MediaInfo {
   source?: 'external' | 'internal';
 }
 
-// Mock external API URL (replace with actual API endpoint)
-const EXTERNAL_API_URL = 'https://api.example.com/resolve';
-const EXTERNAL_API_TIMEOUT = 5000; // 5 seconds
+// Cobalt API endpoint
+const EXTERNAL_API_URL = 'https://cobalt-api.kwiatekmiki.com/';
+const EXTERNAL_API_TIMEOUT = 10000; // 10 seconds
 
 /**
- * Try to fetch media info from external API
+ * Try to fetch media info from external Cobalt API
  */
 async function fetchFromExternalAPI(url: string): Promise<MediaInfo> {
   const controller = new AbortController();
@@ -44,8 +44,14 @@ async function fetchFromExternalAPI(url: string): Promise<MediaInfo> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({
+        url: url,
+        downloadMode: 'auto',
+        filenameStyle: 'pretty',
+        videoQuality: '1080'
+      }),
       signal: controller.signal,
     });
 
@@ -56,11 +62,38 @@ async function fetchFromExternalAPI(url: string): Promise<MediaInfo> {
     }
 
     const data = await response.json();
-    return {
-      ...data,
-      source: 'external' as const,
-      success: true,
-    };
+    
+    // Transform Cobalt response to MediaInfo format
+    if (data.status === 'redirect' || data.status === 'tunnel') {
+      return {
+        success: true,
+        title: data.filename || 'Downloaded Media',
+        thumbnail: '',
+        url: data.url,
+        ext: 'mp4',
+        source: 'external' as const,
+      };
+    } else if (data.status === 'picker') {
+      // Multiple formats available
+      const firstPick = data.picker?.[0];
+      return {
+        success: true,
+        title: firstPick?.title || 'Downloaded Media',
+        thumbnail: firstPick?.thumb || '',
+        url: firstPick?.url || '',
+        ext: 'mp4',
+        source: 'external' as const,
+        formats: data.picker?.map((pick: any) => ({
+          format_id: pick.type || 'default',
+          ext: 'mp4',
+          quality: pick.type || 'unknown',
+          filesize: 0,
+          url: pick.url || ''
+        }))
+      };
+    } else {
+      throw new Error(data.text || 'Failed to process media');
+    }
   } catch (error) {
     clearTimeout(timeoutId);
     

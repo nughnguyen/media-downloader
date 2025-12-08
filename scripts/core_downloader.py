@@ -59,6 +59,12 @@ def extract_info(url):
 
 
 def main():
+    # Fix Windows console encoding for Unicode output
+    import sys
+    import io
+    if sys.platform == 'win32':
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    
     if len(sys.argv) < 2:
         print(json.dumps({
             'success': False,
@@ -76,3 +82,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
