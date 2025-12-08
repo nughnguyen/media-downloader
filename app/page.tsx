@@ -57,7 +57,11 @@ export default function HomePage() {
           body: JSON.stringify({ url }),
         });
 
+        updateItem(newItem.id, { progress: 60 });
+
         const data = await response.json();
+        
+        console.log('API Response:', data);
 
         if (data.success) {
           updateItem(newItem.id, {
@@ -76,11 +80,19 @@ export default function HomePage() {
           else if (url.includes('facebook.com')) platform = 'Facebook';
           else if (url.includes('twitter.com') || url.includes('x.com')) platform = 'Twitter';
 
-          // Show download result modal
-          setDownloadData({
-            ...data,
+          const modalData = {
+            success: true,
+            title: data.title || 'Downloaded Media',
+            thumbnail: data.thumbnail,
+            url: data.url,
+            formats: data.formats || [],
             platform,
-          });
+          };
+          
+          console.log('Setting Modal Data:', modalData);
+          
+          // Show download result modal with enhanced data
+          setDownloadData(modalData);
         } else {
           updateItem(newItem.id, {
             status: 'failed',

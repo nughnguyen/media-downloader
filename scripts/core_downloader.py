@@ -19,11 +19,60 @@ def extract_info(url):
         'no_warnings': True,
         'extract_flat': False,
         'format': 'best',
+        'nocheckcertificate': True,
     }
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+            
+            # Get available formats
+            formats_list = []
+            if info.get('formats'):
+                seen_formats = set()
+                
+                for f in info.get('formats', []):
+                    format_id = f.get('format_id', 'unknown')
+                    
+                    # Skip if already seen this exact format
+                    if format_id in seen_formats:
+                        continue
+                    
+                    ext = f.get('ext', 'mp4')
+                    vcodec = f.get('vcodec', 'none')
+                    acodec = f.get('acodec', 'none')
+                    
+                    # Determine quality label
+                    quality = f.get('format_note', '')
+                    height = f.get('height', 0)
+                    width = f.get('width', 0)
+                    
+                    if height and width:
+                        quality = f"{height}p"
+                    elif 'audio' in format_id.lower() or acodec != 'none' and vcodec == 'none':
+                        abr = f.get('abr', 0)
+                        quality = f"Audio {int(abr)}kbps" if abr else "Audio"
+                    elif not quality:
+                        quality = f.get('quality', 'unknown')
+                    
+                    formats_list.append({
+                        'format_id': format_id,
+                        'ext': ext,
+                        'quality': quality,
+                        'filesize': f.get('filesize') or f.get('filesize_approx') or 0,
+                        'url': f.get('url', ''),
+                        'vcodec': vcodec,
+                        'acodec': acodec,
+                        'height': height,
+                        'width': width,
+                    })
+                    
+                    seen_formats.add(format_id)
+            
+            # Extract best quality URL
+            best_url = info.get('url', '')
+            if not best_url and info.get('formats'):
+                best_url = info['formats'][-1].get('url', '')
             
             # Extract relevant information
             result = {
@@ -32,20 +81,11 @@ def extract_info(url):
                 'thumbnail': info.get('thumbnail', ''),
                 'duration': info.get('duration', 0),
                 'uploader': info.get('uploader', 'Unknown'),
-                'url': info.get('url', ''),
+                'url': best_url,
                 'ext': info.get('ext', 'mp4'),
                 'filesize': info.get('filesize', 0),
                 'description': info.get('description', '')[:200] if info.get('description') else '',
-                'formats': [
-                    {
-                        'format_id': f.get('format_id'),
-                        'ext': f.get('ext'),
-                        'quality': f.get('format_note', 'unknown'),
-                        'filesize': f.get('filesize', 0),
-                        'url': f.get('url', '')
-                    }
-                    for f in info.get('formats', [])[:5]  # Limit to 5 formats
-                ]
+                'formats': formats_list[:20]  # Limit to 20 formats
             }
             
             return result

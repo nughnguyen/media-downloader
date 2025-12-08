@@ -121,6 +121,12 @@ async function fetchFromPythonScript(url: string): Promise<MediaInfo> {
 
     let stdout = '';
     let stderr = '';
+    
+    // Add timeout (10 seconds)
+    const timeout = setTimeout(() => {
+      pythonProcess.kill();
+      reject(new Error('Python script timeout after 10 seconds'));
+    }, 10000);
 
     pythonProcess.stdout.on('data', (data) => {
       stdout += data.toString();
@@ -131,6 +137,8 @@ async function fetchFromPythonScript(url: string): Promise<MediaInfo> {
     });
 
     pythonProcess.on('close', (code) => {
+      clearTimeout(timeout);
+      
       if (code !== 0) {
         reject(new Error(`Python script exited with code ${code}: ${stderr}`));
         return;
@@ -148,6 +156,7 @@ async function fetchFromPythonScript(url: string): Promise<MediaInfo> {
     });
 
     pythonProcess.on('error', (error) => {
+      clearTimeout(timeout);
       reject(new Error(`Failed to spawn Python process: ${error.message}`));
     });
   });
@@ -189,7 +198,7 @@ export async function POST(request: NextRequest) {
 
     let mediaInfo: MediaInfo;
 
-    // Step 1: Try external API first
+    // Try external API first (faster)
     try {
       console.log('[API] Attempting external API...');
       mediaInfo = await fetchFromExternalAPI(url);
@@ -200,7 +209,7 @@ export async function POST(request: NextRequest) {
       console.log('[API] External API failed:', externalError);
       console.log('[API] Falling back to internal Python engine...');
 
-      // Step 2: Fallback to Python script
+      // Fallback to Python script
       try {
         mediaInfo = await fetchFromPythonScript(url);
         console.log('[API] Python fallback succeeded');
