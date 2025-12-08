@@ -23,16 +23,16 @@ export default function SupportedPlatforms() {
   ];
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center">
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-20 left-1/2 -translate-x-1/2 w-96 mb-4"
+            className="mb-4"
           >
-            <div className="p-5 rounded-2xl bg-gray-900/95 backdrop-blur-xl border border-white/10 shadow-2xl">
+            <div className="p-5 rounded-2xl bg-gray-900/95 backdrop-blur-xl border border-white/10 shadow-2xl w-96">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Nền tảng hỗ trợ</h3>
                 <button
