@@ -26,7 +26,7 @@ export default function DonatePage() {
     bankCode: '970448', // OCB bank code
     accountNumber: '0388205003', // Replace with your actual account number
     accountName: 'NGUYEN QUOC HUNG', // Replace with your actual account name
-    defaultMessage: 'Donate MediaDown', // Default transaction description
+    defaultMessage: 'Ung Ho GumballZ', // Default transaction description
   };
 
   // Quick amount presets
@@ -144,54 +144,79 @@ export default function DonatePage() {
                 </div>
 
                 <div className="space-y-6">
-                  {/* QR Code + First 3 Quick Amount Buttons (Same Row) */}
-                  <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
-                    {/* QR Code */}
-                    <div className="flex-shrink-0">
-                      <div className="p-4 rounded-2xl bg-white">
-                        <img
-                          src={currentQRUrl}
-                          alt="VietQR Code"
-                          className="w-56 h-56 object-contain"
-                          loading="lazy"
-                        />
-                      </div>
+                  {/* Top Row: QR Code & Bank Info */}
+                  <div className="flex flex-col md:flex-row gap-6">
+                    {/* QR Code Column */}
+                    <div className="flex-shrink-0 flex justify-center items-center p-4 rounded-2xl bg-white shadow-lg h-fit">
+                      <img
+                        src={currentQRUrl}
+                        alt="VietQR Code"
+                        className="w-48 h-48 object-contain"
+                        loading="lazy"
+                      />
                     </div>
-                    
-                    {/* First 3 Quick Amount Buttons */}
-                    <div className="flex-1 flex flex-col gap-3 w-full md:w-auto min-w-[160px]">
-                      <p className="text-sm text-white/60 text-center md:text-left">
-                        {language === 'en' ? 'Quick Amount:' : 'Mệnh Giá Nhanh:'}
-                      </p>
-                      <div className="grid grid-cols-1 gap-2">
-                        {quickAmounts.slice(0, 3).map((amount) => (
+
+                    {/* Bank Info Column */}
+                    <div className="flex-1 p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-center space-y-4 h-full min-h-[224px]">
+                      {/* Bank Name */}
+                      <div>
+                        <p className="text-xs text-white/60 mb-1">
+                          {language === 'en' ? 'Bank:' : 'Ngân Hàng:'}
+                        </p>
+                        <p className="text-sm font-bold text-white uppercase tracking-wide">
+                         OCB - NGAN HANG PHUONG DONG
+                        </p>
+                      </div>
+
+                       {/* Account Name */}
+                      <div>
+                        <p className="text-xs text-white/60 mb-1">
+                          {language === 'en' ? 'Account Name:' : 'Chủ Tài Khoản:'}
+                        </p>
+                        <p className="text-sm font-bold text-white uppercase tracking-wide">
+                          {bankInfo.accountName}
+                        </p>
+                      </div>
+
+                      {/* Account Number */}
+                      <div>
+                        <p className="text-xs text-white/60 mb-2">
+                          {language === 'en' ? 'Account Number:' : 'Số Tài Khoản:'}
+                        </p>
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-black/20 border border-white/10 group hover:border-white/30 transition-all">
+                          <code className="flex-1 text-base font-mono text-white/90 tracking-wider">
+                            {bankInfo.accountNumber}
+                          </code>
                           <button
-                            key={amount.value}
-                            onClick={() => handleQuickAmount(amount.value)}
-                            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap ${
-                              selectedAmount === amount.value
-                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg scale-105'
-                                : 'bg-white/10 text-white/80 hover:bg-white/20 hover:scale-102'
-                            }`}
+                            onClick={handleCopyAccountNumber}
+                            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all"
+                            title={language === 'en' ? 'Copy Account Number' : 'Sao chép STK'}
                           >
-                            {amount.label}
+                            {copied ? (
+                              <Check className="h-4 w-4 text-green-400" />
+                            ) : (
+                              <Copy className="h-4 w-4 text-white" />
+                            )}
                           </button>
-                        ))}
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Remaining Quick Amount Buttons (3 columns) */}
-                  <div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {quickAmounts.slice(3).map((amount) => (
+                  {/* Middle Row: Quick Amount Buttons */}
+                  <div className="flex flex-col items-center gap-2">
+                     <p className="text-sm text-white/60">
+                      {language === 'en' ? 'Quick Amount:' : 'Mệnh Giá Nhanh:'}
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {quickAmounts.map((amount) => (
                         <button
                           key={amount.value}
                           onClick={() => handleQuickAmount(amount.value)}
-                          className={`px-4 py-3 rounded-xl font-semibold transition-all duration-300 text-sm ${
+                          className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 whitespace-nowrap text-sm ${
                             selectedAmount === amount.value
-                              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                              : 'bg-white/10 text-white/80 hover:bg-white/20'
+                              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg scale-105'
+                              : 'bg-white/10 text-white/80 hover:bg-white/20 hover:scale-102'
                           }`}
                         >
                           {amount.label}
@@ -200,99 +225,53 @@ export default function DonatePage() {
                     </div>
                   </div>
 
-                  {/* Custom Amount & Message */}
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm text-white/60 mb-2 block">
-                        {language === 'en' ? 'Custom Amount (VND):' : 'Mệnh Giá Tùy Chỉnh (VND):'}
-                      </label>
-                      <input
-                        type="number"
-                        value={customAmount}
-                        onChange={(e) => {
-                          setCustomAmount(e.target.value);
-                          setSelectedAmount('');
-                        }}
-                        placeholder="Nhập số tiền..."
-                        className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 outline-none focus:border-purple-500 transition-colors"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm text-white/60 mb-2 block">
-                        {language === 'en' ? 'Custom Message:' : 'Nội Dung Chuyển Khoản:'}
-                      </label>
-                      <input
-                        type="text"
-                        value={customMessage}
-                        onChange={(e) => setCustomMessage(e.target.value)}
-                        placeholder={bankInfo.defaultMessage}
-                        className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 outline-none focus:border-purple-500 transition-colors"
-                      />
-                    </div>
-
-                    <button
-                      onClick={handleGenerateCustomQR}
-                      className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-pink-600 text-white font-semibold hover:shadow-lg transition-all duration-300"
-                    >
-                      {language === 'en' ? 'Generate New QR Code' : 'Tạo Mã QR Mới'}
-                    </button>
-                  </div>
-
-                  {/* Bank Information */}
+                  {/* Bottom Row: Custom Inputs */}
                   <div className="space-y-3 pt-4 border-t border-white/10">
-                    {/* Bank Name */}
-                    <div>
-                      <p className="text-xs text-white/60 mb-1">
-                        {language === 'en' ? 'Bank:' : 'Ngân Hàng:'}
-                      </p>
-                      <p className="text-sm font-semibold text-white">
-                        OCB - NGAN HANG PHUONG DONG
-                      </p>
-                    </div>
-
-                    {/* Account Name */}
-                    <div>
-                      <p className="text-xs text-white/60 mb-1">
-                        {language === 'en' ? 'Account Name:' : 'Tên Tài Khoản:'}
-                      </p>
-                      <p className="text-sm font-semibold text-white">
-                        {bankInfo.accountName}
-                      </p>
-                    </div>
-
-                    {/* Account Number */}
-                    <div>
-                      <p className="text-xs text-white/60 mb-2">
-                        {language === 'en' ? 'Account Number:' : 'Số Tài Khoản:'}
-                      </p>
-                      
-                      <div className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10">
-                        <code className="flex-1 text-base font-mono text-white/90">
-                          {bankInfo.accountNumber}
-                        </code>
-                        
-                        <button
-                          onClick={handleCopyAccountNumber}
-                          className="flex-shrink-0 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                        >
-                          {copied ? (
-                            <Check className="h-4 w-4 text-green-400" />
-                          ) : (
-                            <Copy className="h-4 w-4 text-white" />
-                          )}
-                        </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-white/60 mb-2 block">
+                          {language === 'en' ? 'Custom Amount:' : 'Mức Khác (VND):'}
+                        </label>
+                        <input
+                          type="number"
+                          value={customAmount}
+                          onChange={(e) => {
+                            setCustomAmount(e.target.value);
+                            setSelectedAmount('');
+                          }}
+                          placeholder="Ví dụ: 50000"
+                          className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/30 outline-none focus:border-purple-500 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-white/60 mb-2 block">
+                          {language === 'en' ? 'Message:' : 'Lời Nhắn:'}
+                        </label>
+                        <input
+                          type="text"
+                          value={customMessage}
+                          onChange={(e) => setCustomMessage(e.target.value)}
+                          placeholder={bankInfo.defaultMessage}
+                          className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/30 outline-none focus:border-purple-500 transition-colors"
+                        />
                       </div>
                     </div>
-
-                    <p className="text-xs text-white/50 pt-2">
-                      {language === 'en'
-                        ? 'Scan VietQR code with your banking app to transfer instantly'
-                        : 'Quét mã VietQR bằng ứng dụng ngân hàng để chuyển khoản ngay'}
-                    </p>
+                    
+                    <button
+                      onClick={handleGenerateCustomQR}
+                      className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-pink-600 text-white font-medium hover:shadow-lg transition-all duration-300 text-sm"
+                    >
+                      {language === 'en' ? 'Update QR Code' : 'Cập Nhật Mã QR'}
+                    </button>
                   </div>
+                  
+                  <p className="text-xs text-white/50 text-center italic">
+                    {language === 'en'
+                      ? 'Scan VietQR code with your banking app to transfer instantly'
+                      : 'Quét mã VietQR bằng ứng dụng ngân hàng để chuyển khoản ngay'}
+                  </p>
                 </div>
-              </div>
+            </div>
             </div>
 
             {/* Right Column - Zypage & Share */}

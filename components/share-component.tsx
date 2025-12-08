@@ -13,7 +13,7 @@ interface ShareComponentProps {
 }
 
 export default function ShareComponent({ 
-  url = typeof window !== 'undefined' ? window.location.origin : 'https://mediadown.app',
+  url = typeof window !== 'undefined' ? window.location.origin : 'https://mediadown.gumballz.vercel.app',
   title = 'MediaDown - Media Downloader',
   description = 'Download media from any platform with hybrid backend'
 }: ShareComponentProps) {
@@ -58,7 +58,7 @@ export default function ShareComponent({
     if (qrCodeDataUrl) {
       const link = document.createElement('a');
       link.href = qrCodeDataUrl;
-      link.download = 'mediadown-qr-code.png';
+      link.download = 'mediadown.png';
       link.click();
     }
   };
@@ -196,7 +196,7 @@ export default function ShareComponent({
 
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-          <span className="text-sm font-mono text-white/30 tracking-wider">mediadown.app</span>
+          <span className="text-sm font-mono text-white/30 tracking-wider">mediadown.gumballz.vercel.app</span>
         </div>
       </div>
     </div>
