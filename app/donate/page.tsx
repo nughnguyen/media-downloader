@@ -37,10 +37,10 @@ export default function DonatePage() {
   ];
 
   // Generate VietQR URL
-  const getVietQRUrl = (amount: string, message: string) => {
+  const getVietQRUrl = (amount: string, message: string, template: 'compact' | 'compact2' = 'compact') => {
     const finalAmount = amount || '';
     const finalMessage = message || bankInfo.defaultMessage;
-    return `https://img.vietqr.io/image/${bankInfo.bankCode}-${bankInfo.accountNumber}-compact.jpg?amount=${finalAmount}&addInfo=${encodeURIComponent(finalMessage)}&accountName=${encodeURIComponent(bankInfo.accountName)}`;
+    return `https://img.vietqr.io/image/${bankInfo.bankCode}-${bankInfo.accountNumber}-${template}.jpg?amount=${finalAmount}&addInfo=${encodeURIComponent(finalMessage)}&accountName=${encodeURIComponent(bankInfo.accountName)}`;
   };
 
   const [currentQRUrl, setCurrentQRUrl] = useState(getVietQRUrl('', bankInfo.defaultMessage));
@@ -67,12 +67,31 @@ export default function DonatePage() {
     }
   };
 
-  const handleDownloadQR = () => {
-    const link = document.createElement('a');
-    link.href = currentQRUrl;
-    link.download = 'vietqr-donate.jpg';
-    link.target = '_blank';
-    link.click();
+  const handleDownloadQR = async () => {
+    const amount = customAmount || selectedAmount;
+    const message = customMessage || bankInfo.defaultMessage;
+    const downloadUrl = getVietQRUrl(amount, message, 'compact2');
+
+    try {
+      const response = await fetch(downloadUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `vietqr-${selectedAmount || 'custom'}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading QR code:', error);
+      // Fallback
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = 'donate.jpg';
+      link.target = '_blank';
+      link.click();
+    }
   };
 
   return (
@@ -104,46 +123,72 @@ export default function DonatePage() {
             {/* Left Column - VietQR Only */}
             <div className="space-y-6">
               {/* VietQR Bank Transfer Section */}
-              <div className="p-6 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/20">
-                <div className="flex items-center gap-2 mb-4">
-                  <Building2 className="h-5 w-5 text-white" />
-                  <h3 className="text-lg font-semibold text-white">
-                    {language === 'en' ? 'Bank Transfer (VietQR)' : 'Chuyển Khoản Ngân Hàng (VietQR)'}
-                  </h3>
+              <div className="relative p-6 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/20">
+                {/* Header with Download Button */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-white" />
+                    <h3 className="text-lg font-semibold text-white">
+                      {language === 'en' ? 'Bank Transfer (VietQR)' : 'Chuyển Khoản Ngân Hàng (VietQR)'}
+                    </h3>
+                  </div>
+                  
+                  {/* Small Download Button in Corner */}
+                  <button
+                    onClick={handleDownloadQR}
+                    className="p-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-lg transition-all duration-300 group"
+                    title={language === 'en' ? 'Download QR Code' : 'Tải Mã QR'}
+                  >
+                    <Download className="h-5 w-5" />
+                  </button>
                 </div>
 
                 <div className="space-y-6">
-                  {/* QR Code Display */}
-                  <div className="flex flex-col items-center">
-                    <div className="p-4 rounded-2xl bg-white mb-4">
-                      <img
-                        src={currentQRUrl}
-                        alt="VietQR Code"
-                        className="w-64 h-64 object-contain"
-                        loading="lazy"
-                      />
+                  {/* QR Code + First 3 Quick Amount Buttons (Same Row) */}
+                  <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
+                    {/* QR Code */}
+                    <div className="flex-shrink-0">
+                      <div className="p-4 rounded-2xl bg-white">
+                        <img
+                          src={currentQRUrl}
+                          alt="VietQR Code"
+                          className="w-56 h-56 object-contain"
+                          loading="lazy"
+                        />
+                      </div>
                     </div>
                     
-                    <button
-                      onClick={handleDownloadQR}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold hover:shadow-lg transition-all duration-300"
-                    >
-                      <Download className="h-4 w-4" />
-                      {language === 'en' ? 'Download QR Code' : 'Tải Mã QR'}
-                    </button>
+                    {/* First 3 Quick Amount Buttons */}
+                    <div className="flex-1 flex flex-col gap-3 w-full md:w-auto min-w-[160px]">
+                      <p className="text-sm text-white/60 text-center md:text-left">
+                        {language === 'en' ? 'Quick Amount:' : 'Mệnh Giá Nhanh:'}
+                      </p>
+                      <div className="grid grid-cols-1 gap-2">
+                        {quickAmounts.slice(0, 3).map((amount) => (
+                          <button
+                            key={amount.value}
+                            onClick={() => handleQuickAmount(amount.value)}
+                            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap ${
+                              selectedAmount === amount.value
+                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg scale-105'
+                                : 'bg-white/10 text-white/80 hover:bg-white/20 hover:scale-102'
+                            }`}
+                          >
+                            {amount.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Quick Amount Buttons */}
+                  {/* Remaining Quick Amount Buttons (3 columns) */}
                   <div>
-                    <p className="text-sm text-white/60 mb-3">
-                      {language === 'en' ? 'Quick Amount:' : 'Mệnh Giá Nhanh:'}
-                    </p>
                     <div className="grid grid-cols-3 gap-2">
-                      {quickAmounts.map((amount) => (
+                      {quickAmounts.slice(3).map((amount) => (
                         <button
                           key={amount.value}
                           onClick={() => handleQuickAmount(amount.value)}
-                          className={`px-4 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                          className={`px-4 py-3 rounded-xl font-semibold transition-all duration-300 text-sm ${
                             selectedAmount === amount.value
                               ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
                               : 'bg-white/10 text-white/80 hover:bg-white/20'
@@ -202,7 +247,7 @@ export default function DonatePage() {
                         {language === 'en' ? 'Bank:' : 'Ngân Hàng:'}
                       </p>
                       <p className="text-sm font-semibold text-white">
-                        OCB - Orient Commercial Bank
+                        OCB - NGAN HANG PHUONG DONG
                       </p>
                     </div>
 

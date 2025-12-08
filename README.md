@@ -42,7 +42,7 @@ A powerful media downloader web application built with Next.js and Python, featu
 ### Step 1: Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/nughnguyen/media-downloader.git
 cd download
 ```
 
@@ -192,6 +192,7 @@ download/
    - Returns data with `source: 'internal'`
 
 3. **Error Handling**: Both strategies include comprehensive error handling
+
    - Network errors
    - Timeout errors
    - JSON parsing errors

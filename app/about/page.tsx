@@ -167,9 +167,6 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* Share Section */}
-            <ShareComponent />
-
             {/* Version */}
             <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-500/20">
               <div className="text-center">
@@ -178,8 +175,8 @@ export default function AboutPage() {
                 </div>
                 <p className="text-white/60">
                   {language === 'en'
-                    ? 'Built with ❤️ for the community'
-                    : 'Được xây dựng với ❤️ cho cộng đồng'}
+                    ? 'Powered by Quoc Hung'
+                    : 'Được xây dựng bởi Quốc Hưng'}
                 </p>
               </div>
             </div>
