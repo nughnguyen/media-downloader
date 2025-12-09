@@ -12,11 +12,20 @@ interface MediaFormat {
   url: string;
 }
 
+interface MediaImage {
+  url: string;
+  width: number;
+  height: number;
+  ext: string;
+}
+
 interface DownloadResultProps {
   title: string;
   thumbnail?: string;
   url: string;
   formats?: MediaFormat[];
+  images?: MediaImage[];
+  is_image_post?: boolean;
   platform?: string;
   onClose: () => void;
 }
@@ -26,10 +35,22 @@ export default function DownloadResult({
   thumbnail, 
   url, 
   formats = [],
+  images = [],
+  is_image_post = false,
   platform,
   onClose 
 }: DownloadResultProps) {
-  const [selectedType, setSelectedType] = useState<'video' | 'audio' | 'image'>('video');
+  // Auto-detect and set initial tab based on content type
+  const getInitialTab = () => {
+    // Check if URL contains 'photo' (TikTok image posts)
+    const urlLower = url.toLowerCase();
+    if (urlLower.includes('photo') || is_image_post || images.length > 0) {
+      return 'image';
+    }
+    return 'video';
+  };
+
+  const [selectedType, setSelectedType] = useState<'video' | 'audio' | 'image'>(getInitialTab());
   const [selectedFormat, setSelectedFormat] = useState<MediaFormat | null>(null);
 
   // Debug: Log received data
@@ -40,6 +61,43 @@ export default function DownloadResult({
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+  };
+
+  // Helper: Check if URL is from YouTube/Google Video (CORS restricted)
+  const isYouTubeOrGoogleVideo = (downloadUrl: string) => {
+    return downloadUrl.includes('googlevideo.com') || 
+           downloadUrl.includes('youtube.com') ||
+           downloadUrl.includes('youtu.be');
+  };
+
+  // Helper: Universal download handler
+  const handleDownloadFile = (downloadUrl: string, fileName: string) => {
+    // For YouTube/Google Video, skip fetch and open directly (avoid CORS)
+    if (isYouTubeOrGoogleVideo(downloadUrl)) {
+      console.log('[Download] YouTube detected - opening in new tab');
+      window.open(downloadUrl, '_blank');
+      return;
+    }
+
+    // For other platforms, try fetch first
+    console.log('[Download] Trying fetch download:', downloadUrl);
+    fetch(downloadUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      })
+      .catch((error) => {
+        console.log('[Download] Fetch failed, opening in new tab:', error);
+        // Fallback: open in new tab
+        window.open(downloadUrl, '_blank');
+      });
   };
 
   const handleDownload = async () => {
@@ -208,85 +266,213 @@ export default function DownloadResult({
           </div>
 
           {/* Right: Download Options */}
-          <div className="space-y-6">
-            {/* Media Type Selection */}
-            <div>
-              <p className="text-sm text-white/60 mb-3">Chọn loại tải xuống:</p>
-              <div className="grid grid-cols-3 gap-2">
-                {mediaTypes.map(({ type, icon: Icon, label }) => (
+          <div className="space-y-4">
+            {/* Tabs */}
+            <div className="flex border-b border-white/10">
+              {mediaTypes.map(({ type, icon: Icon, label }) => {
+                const hasContent = (() => {
+                  switch(type) {
+                    case 'audio':
+                      return formats.filter((f: any) => 
+                        (f.ext === 'm4a' || f.ext === 'mp3' || f.ext === 'webm' || f.ext === 'opus') ||
+                        (f.acodec && f.acodec !== 'none' && (!f.vcodec || f.vcodec === 'none')) ||
+                        f.quality?.toLowerCase().includes('audio') ||
+                        f.quality?.toLowerCase().includes('kbps') ||
+                        f.format_id?.toLowerCase().includes('audio')
+                      ).length > 0;
+                    case 'image':
+                      return formats.filter((f: any) => 
+                        f.ext === 'jpg' || f.ext === 'jpeg' || f.ext === 'png' || 
+                        f.ext === 'webp' || f.ext === 'gif'
+                      ).length > 0 || !!thumbnail;
+                    default: // video
+                      return formats.filter((f: any) => {
+                        const hasVideo = f.vcodec && f.vcodec !== 'none';
+                        const isVideoFormat = f.ext === 'mp4' || f.ext === 'webm' || f.ext === 'mkv' || f.ext === 'mov';
+                        const hasResolution = f.height || f.width || f.quality?.match(/\d+p/);
+                        const notAudioOnly = !f.quality?.toLowerCase().includes('audio only') && 
+                                            !f.quality?.toLowerCase().includes('kbps');
+                        return (hasVideo || isVideoFormat || hasResolution) && notAudioOnly;
+                      }).length > 0;
+                  }
+                })();
+
+                return (
                   <button
                     key={type}
                     onClick={() => setSelectedType(type)}
-                    className={`p-4 rounded-xl border-2 transition-all duration-300 flex flex-col items-center gap-2 ${
+                    className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-all duration-300 ${
                       selectedType === type
-                        ? 'bg-purple-600 border-purple-500 text-white'
-                        : 'bg-white/5 border-white/10 text-white/60 hover:border-white/20'
+                        ? 'border-red-500 text-red-500'
+                        : 'border-transparent text-white/60 hover:text-white/80'
                     }`}
                   >
-                    <Icon className="h-6 w-6" />
-                    <span className="text-xs font-medium text-center">{label}</span>
+                    <Icon className="h-5 w-5" />
+                    <span className="font-semibold">{label}</span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
 
-            {/* Quality & Format Selection */}
-            {filteredFormats.length > 0 ? (
-              <div>
-                <p className="text-sm text-white/60 mb-3">
-                  {selectedType === 'video' && 'Chọn độ phân giải:'}
-                  {selectedType === 'audio' && 'Chọn chất lượng âm thanh:'}
-                  {selectedType === 'image' && 'Chọn kích thước:'}
-                </p>
-                <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                  {filteredFormats.slice(0, 15).map((format: any, index: number) => (
-                    <button
+            {/* Image Preview Grid - Show when there are images */}
+            {selectedType === 'image' && images.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm text-white/60 mb-3">Preview ({images.length} images):</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto custom-scrollbar">
+                  {images.map((image, index) => (
+                    <motion.div
                       key={index}
-                      onClick={() => setSelectedFormat(format)}
-                      className={`w-full p-3 rounded-xl border transition-all flex items-center justify-between group ${
-                        selectedFormat?.format_id === format.format_id
-                          ? 'bg-purple-600 border-purple-500 text-white'
-                          : 'bg-white/5 border-white/10 text-white/80 hover:border-white/20 hover:bg-white/10'
-                      }`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="relative aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-purple-500/50 transition-all duration-300 cursor-pointer group"
+                      onClick={() => {
+                        const fileName = `${title.substring(0, 30)}_${index + 1}.${image.ext}`;
+                        handleDownloadFile(image.url, fileName);
+                      }}
                     >
-                      <div className="flex flex-col items-start">
-                        <span className="text-base font-semibold">
-                          {formatQualityDisplay(format)}
-                        </span>
-                        <span className="text-xs opacity-70">
-                          {format.ext.toUpperCase()}
-                          {format.vcodec && format.vcodec !== 'none' && selectedType === 'video' && (
-                            <> • {format.vcodec.split('.')[0]}</>
-                          )}
-                          {format.acodec && format.acodec !== 'none' && selectedType === 'audio' && (
-                            <> • {format.acodec.split('.')[0]}</>
-                          )}
-                        </span>
+                      <img
+                        src={image.url}
+                        alt={`Image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                      {/* Overlay with download icon */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex items-center justify-center">
+                        <Download className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-110" />
                       </div>
-                      <div className="text-right">
-                        <span className="text-sm font-mono font-semibold">
-                          {formatFileSize(format.filesize)}
-                        </span>
+                      {/* Image number badge */}
+                      <div className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-black/70 text-white text-xs font-semibold">
+                        #{index + 1}
                       </div>
-                    </button>
+                    </motion.div>
                   ))}
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-8 text-white/50 text-sm">
-                Không có định dạng {selectedType === 'audio' ? 'âm thanh' : selectedType === 'image' ? 'hình ảnh' : 'video'} khả dụng
-              </div>
             )}
 
-            {/* Download Button */}
-            <button
-              onClick={handleDownload}
-              disabled={!url}
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold hover:shadow-lg hover:shadow-purple-500/50 transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Download className="h-5 w-5 group-hover:animate-bounce" />
-              Tải xuống
-            </button>
+            {/* Table */}
+            <div className="bg-white/5 rounded-xl overflow-hidden border border-white/10">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left px-4 py-3 text-sm font-semibold text-white/80">File type</th>
+                    <th className="text-left px-4 py-3 text-sm font-semibold text-white/80">Format</th>
+                    <th className="text-left px-4 py-3 text-sm font-semibold text-white/80">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFormats.length > 0 ? (
+                    filteredFormats.slice(0, 10).map((format: any, index: number) => {
+                      const fileType = (() => {
+                        if (selectedType === 'audio') {
+                          const match = format.quality?.match(/(\d+)kbps/);
+                          if (match) {
+                            return `MP3 - ${match[1]}kbps`;
+                          }
+                          return `${format.ext.toUpperCase()} - Audio`;
+                        } else if (selectedType === 'video') {
+                          if (format.height) {
+                            return `${format.height}p (.${format.ext})`;
+                          }
+                          return `${format.quality || 'Video'} (.${format.ext})`;
+                        }
+                        return `${format.width || ''}x${format.height || ''} (.${format.ext})`;
+                      })();
+
+                      return (
+                        <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="px-4 py-3 text-white/90">{fileType}</td>
+                          <td className="px-4 py-3 text-white/70">Auto</td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => {
+                                const downloadUrl = format.url || url;
+                                const fileName = `${title.substring(0, 50)}.${format.ext}`;
+                                handleDownloadFile(downloadUrl, fileName);
+                              }}
+                              className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-300 flex items-center gap-2 text-sm"
+                            >
+                              <Download className="h-4 w-4" />
+                              Download
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : selectedType === 'image' && (images.length > 0 || thumbnail) ? (
+                    <>
+                      {/* TikTok Image Carousel */}
+                      {images.length > 0 ? (
+                        images.map((image, index) => (
+                          <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="px-4 py-3 text-white/90">
+                              Image #{index + 1} ({image.width}x{image.height})
+                            </td>
+                            <td className="px-4 py-3 text-white/70">Auto</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => {
+                                  const fileName = `${title.substring(0, 30)}_${index + 1}.${image.ext}`;
+                                  
+                                  // Try to download via fetch
+                                  fetch(image.url)
+                                    .then(response => response.blob())
+                                    .then(blob => {
+                                      const blobUrl = window.URL.createObjectURL(blob);
+                                      const link = document.createElement('a');
+                                      link.href = blobUrl;
+                                      link.download = fileName;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      window.URL.revokeObjectURL(blobUrl);
+                                    })
+                                    .catch(() => {
+                                      // Fallback: open in new tab
+                                      window.open(image.url, '_blank');
+                                    });
+                                }}
+                                className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-300 flex items-center gap-2 text-sm"
+                              >
+                                <Download className="h-4 w-4" />
+                                Download
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : thumbnail ? (
+                        <tr className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="px-4 py-3 text-white/90">Thumbnail Image</td>
+                          <td className="px-4 py-3 text-white/70">Auto</td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => {
+                                if (thumbnail) {
+                                  window.open(thumbnail, '_blank');
+                                }
+                              }}
+                              className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-300 flex items-center gap-2 text-sm"
+                            >
+                              <Download className="h-4 w-4" />
+                              Download
+                            </button>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </>
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-8 text-center text-white/50 text-sm">
+                        Không có định dạng {selectedType === 'audio' ? 'âm thanh' : selectedType === 'image' ? 'hình ảnh' : 'video'} khả dụng
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </motion.div>

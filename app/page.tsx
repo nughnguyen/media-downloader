@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQueueStore } from '@/store/queue-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Sparkles } from 'lucide-react';
+import { Download, Sparkles, Clipboard as ClipboardIcon } from 'lucide-react';
 import DownloadResult from '@/components/download-result';
 import SupportedPlatforms from '@/components/supported-platforms';
 
@@ -20,6 +20,13 @@ interface MediaData {
     filesize: number;
     url: string;
   }>;
+  images?: Array<{
+    url: string;
+    width: number;
+    height: number;
+    ext: string;
+  }>;
+  is_image_post?: boolean;
   source?: 'external' | 'internal';
   platform?: string;
 }
@@ -28,7 +35,7 @@ export default function HomePage() {
   const [url, setUrl] = useState('');
   const [focused, setFocused] = useState(false);
   const { addItem, updateItem } = useQueueStore();
-  const { quickPaste, language } = useSettingsStore();
+  const { language } = useSettingsStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [downloadData, setDownloadData] = useState<MediaData | null>(null);
 
@@ -86,6 +93,8 @@ export default function HomePage() {
             thumbnail: data.thumbnail,
             url: data.url,
             formats: data.formats || [],
+            images: data.images || [],
+            is_image_post: data.is_image_post || false,
             platform,
           };
           
@@ -112,13 +121,11 @@ export default function HomePage() {
   };
 
   const handlePaste = async () => {
-    if (quickPaste) {
-      try {
-        const text = await navigator.clipboard.readText();
-        setUrl(text);
-      } catch (err) {
-        console.error('Failed to read clipboard:', err);
-      }
+    try {
+      const text = await navigator.clipboard.readText();
+      setUrl(text);
+    } catch (err) {
+      console.error('Failed to read clipboard:', err);
     }
   };
 
@@ -159,23 +166,32 @@ export default function HomePage() {
                   onChange={(e) => setUrl(e.target.value)}
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
-                  onClick={handlePaste}
                   placeholder={language === 'en' ? 'Paste your link here...' : 'Dán liên kết tại đây...'}
-                  className={`w-full px-6 py-5 rounded-2xl bg-white/10 backdrop-blur-xl border-2 transition-all duration-300 text-white placeholder-white/50 outline-none ${
+                  className={`w-full pl-6 pr-44 py-5 rounded-2xl bg-white/10 backdrop-blur-xl border-2 transition-all duration-300 text-white placeholder-white/50 outline-none ${
                     focused
                       ? 'border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.4)]'
                       : 'border-white/20 hover:border-white/30'
                   }`}
                 />
                 
-                <button
-                  type="submit"
-                  disabled={isProcessing || !url.trim()}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2"
-                >
-                  <Download className="h-5 w-5" />
-                  {isProcessing ? (language === 'en' ? 'Processing...' : 'Đang xử lý...') : (language === 'en' ? 'Download' : 'Tải xuống')}
-                </button>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePaste}
+                    className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-200"
+                    title={language === 'en' ? 'Paste' : 'Dán'}
+                  >
+                    <ClipboardIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isProcessing || !url.trim()}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2"
+                  >
+                    <Download className="h-5 w-5" />
+                    {isProcessing ? (language === 'en' ? 'Processing...' : 'Đang xử lý...') : (language === 'en' ? 'Download' : 'Tải xuống')}
+                  </button>
+                </div>
               </div>
             </form>
           </motion.div>
@@ -187,27 +203,7 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8"
           >
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-600/10 to-purple-600/5 border border-purple-500/20">
-              <h3 className="text-xl font-semibold text-white mb-2">
-                {language === 'en' ? 'External API First' : 'API Bên Ngoài Ưu Tiên'}
-              </h3>
-              <p className="text-white/70">
-                {language === 'en'
-                  ? 'We try external services first for the fastest response'
-                  : 'Chúng tôi thử dịch vụ bên ngoài trước để có phản hồi nhanh nhất'}
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-600/10 to-blue-600/5 border border-blue-500/20">
-              <h3 className="text-xl font-semibold text-white mb-2">
-                {language === 'en' ? 'Internal Fallback' : 'Dự Phòng Nội Bộ'}
-              </h3>
-              <p className="text-white/70">
-                {language === 'en'
-                  ? 'If external API fails, our Python engine takes over'
-                  : 'Nếu API bên ngoài thất bại, công cụ Python của chúng tôi sẽ xử lý'}
-              </p>
-            </div>
+            
           </motion.div>
         </div>
       </div>
@@ -223,6 +219,8 @@ export default function HomePage() {
             thumbnail={downloadData.thumbnail}
             url={downloadData.url || ''}
             formats={downloadData.formats}
+            images={downloadData.images}
+            is_image_post={downloadData.is_image_post}
             platform={downloadData.platform}
             onClose={() => setDownloadData(null)}
           />

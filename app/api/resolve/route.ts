@@ -23,6 +23,13 @@ interface MediaInfo {
     filesize: number;
     url: string;
   }>;
+  images?: Array<{
+    url: string;
+    width: number;
+    height: number;
+    ext: string;
+  }>;
+  is_image_post?: boolean;
   error?: string;
   message?: string;
   source?: 'external' | 'internal';
@@ -72,6 +79,13 @@ async function fetchFromExternalAPI(url: string): Promise<MediaInfo> {
         url: data.url,
         ext: 'mp4',
         source: 'external' as const,
+        formats: [{
+          format_id: 'default',
+          ext: 'mp4',
+          quality: 'HD',
+          filesize: 0,
+          url: data.url
+        }]
       };
     } else if (data.status === 'picker') {
       // Multiple formats available

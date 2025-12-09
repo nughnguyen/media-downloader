@@ -74,6 +74,39 @@ def extract_info(url):
             if not best_url and info.get('formats'):
                 best_url = info['formats'][-1].get('url', '')
             
+            # Check for TikTok image carousel or image posts
+            images_list = []
+            
+            # Check if this is a playlist/multi-image post 
+            if info.get('_type') == 'playlist' and info.get('entries'):
+                # TikTok image carousel or similar
+                for entry in info.get('entries', []):
+                    # Try different fields where image URL might be
+                    image_url = (entry.get('url') or 
+                                entry.get('webpage_url') or 
+                                entry.get('thumbnail'))
+                    
+                    if image_url:
+                        images_list.append({
+                            'url': image_url,
+                            'width': entry.get('width', 0) or entry.get('thumbnail_width', 0),
+                            'height': entry.get('height', 0) or entry.get('thumbnail_height', 0),
+                            'ext': entry.get('ext', 'jpg'),
+                            'title': entry.get('title', ''),
+                        })
+            elif 'entries' in info:
+                # Alternative format for image posts
+                for entry in info.get('entries', []):
+                    image_url = entry.get('url') or entry.get('thumbnail')
+                    if image_url:
+                        images_list.append({
+                            'url': image_url,
+                            'width': entry.get('width', 0) or entry.get('thumbnail_width', 0),
+                            'height': entry.get('height', 0) or entry.get('thumbnail_height', 0),
+                            'ext': entry.get('ext', 'jpg'),
+                            'title': entry.get('title', ''),
+                        })
+            
             # Extract relevant information
             result = {
                 'success': True,
@@ -85,7 +118,17 @@ def extract_info(url):
                 'ext': info.get('ext', 'mp4'),
                 'filesize': info.get('filesize', 0),
                 'description': info.get('description', '')[:200] if info.get('description') else '',
-                'formats': formats_list[:20]  # Limit to 20 formats
+                'formats': formats_list[:20] if formats_list else [{
+                    'format_id': 'default',
+                    'ext': info.get('ext', 'mp4'),
+                    'quality': 'HD',
+                    'filesize': info.get('filesize', 0),
+                    'url': best_url,
+                    'vcodec': 'h264', # Assume video if it's a fallback
+                    'acodec': 'aac',
+                }] if best_url else [],
+                'images': images_list,  # TikTok image carousel or other image posts
+                'is_image_post': len(images_list) > 0,  # Flag for image-only posts
             }
             
             return result
