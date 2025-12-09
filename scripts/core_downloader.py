@@ -110,7 +110,7 @@ def extract_info(url):
             # Extract relevant information
             result = {
                 'success': True,
-                'title': info.get('title', 'Unknown Title'),
+                'title': info.get('description', '')[:100] if info.get('description') else info.get('title', 'Unknown Title'),
                 'thumbnail': info.get('thumbnail', ''),
                 'duration': info.get('duration', 0),
                 'uploader': info.get('uploader', 'Unknown'),

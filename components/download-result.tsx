@@ -314,12 +314,14 @@ export default function DownloadResult({
               })}
             </div>
 
-            {/* Image Preview Grid - Show when there are images */}
-            {selectedType === 'image' && images.length > 0 && (
+            {/* Image Preview Grid - Show for any image content (Carousel or Thumbnail) */}
+            {selectedType === 'image' && (images.length > 0 || thumbnail) && (
               <div className="mb-4">
-                <p className="text-sm text-white/60 mb-3">Preview ({images.length} images):</p>
+                <p className="text-sm text-white/60 mb-3">
+                  {images.length > 0 ? `Preview (${images.length} images):` : 'Thumbnail Preview:'}
+                </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto custom-scrollbar">
-                  {images.map((image, index) => (
+                  {(images.length > 0 ? images : [{ url: thumbnail!, width: 0, height: 0, ext: 'jpg' }]).map((image, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -327,7 +329,7 @@ export default function DownloadResult({
                       transition={{ delay: index * 0.05 }}
                       className="relative aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-purple-500/50 transition-all duration-300 cursor-pointer group"
                       onClick={() => {
-                        const safeTitle = title.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+                        const safeTitle = title.replace(/[^a-z0-9]/gi, '_').substring(0, 100);
                         const fileName = `${safeTitle}_${index + 1}.${image.ext}`;
                         handleDownloadFile(image.url, fileName);
                       }}
@@ -345,9 +347,11 @@ export default function DownloadResult({
                         <Download className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-110" />
                       </div>
                       {/* Image number badge */}
-                      <div className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-black/70 text-white text-xs font-semibold">
-                        #{index + 1}
-                      </div>
+                      {images.length > 0 && (
+                        <div className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-black/70 text-white text-xs font-semibold">
+                          #{index + 1}
+                        </div>
+                      )}
                     </motion.div>
                   ))}
                 </div>

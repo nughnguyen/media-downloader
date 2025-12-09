@@ -89,7 +89,7 @@ export default function HomePage() {
 
           const modalData = {
             success: true,
-            title: data.title || 'Downloaded Media',
+            title: data.title || (platform !== 'Unknown' ? `${platform} Content` : 'Downloaded Media'),
             thumbnail: data.thumbnail,
             url: data.url,
             formats: data.formats || [],
