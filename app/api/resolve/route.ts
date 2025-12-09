@@ -90,6 +90,27 @@ async function fetchFromExternalAPI(url: string): Promise<MediaInfo> {
     } else if (data.status === 'picker') {
       // Multiple formats available
       const firstPick = data.picker?.[0];
+      
+      // Separate images from other formats
+      const images = data.picker
+        ?.filter((pick: any) => pick.type === 'photo')
+        .map((pick: any) => ({
+          url: pick.url,
+          width: 0, // Cobalt doesn't always provide dimensions
+          height: 0,
+          ext: 'jpg', // Default to jpg
+        })) || [];
+        
+      const formats = data.picker
+        ?.filter((pick: any) => pick.type !== 'photo')
+        .map((pick: any) => ({
+          format_id: pick.type || 'default',
+          ext: 'mp4',
+          quality: pick.type || 'unknown',
+          filesize: 0,
+          url: pick.url || ''
+        })) || [];
+
       return {
         success: true,
         title: firstPick?.title || 'Downloaded Media',
@@ -97,13 +118,9 @@ async function fetchFromExternalAPI(url: string): Promise<MediaInfo> {
         url: firstPick?.url || '',
         ext: 'mp4',
         source: 'external' as const,
-        formats: data.picker?.map((pick: any) => ({
-          format_id: pick.type || 'default',
-          ext: 'mp4',
-          quality: pick.type || 'unknown',
-          filesize: 0,
-          url: pick.url || ''
-        }))
+        formats: formats,
+        images: images,
+        is_image_post: images.length > 0
       };
     } else {
       throw new Error(data.text || 'Failed to process media');
