@@ -72,9 +72,10 @@ async function fetchFromExternalAPI(url: string): Promise<MediaInfo> {
     
     // Transform Cobalt response to MediaInfo format
     if (data.status === 'redirect' || data.status === 'tunnel') {
+      const title = data.text ? (data.text.length > 100 ? data.text.substring(0, 100) + '...' : data.text) : (data.filename || 'Downloaded Media');
       return {
         success: true,
-        title: data.filename || 'Downloaded Media',
+        title: title,
         thumbnail: '',
         url: data.url,
         ext: 'mp4',
@@ -111,9 +112,11 @@ async function fetchFromExternalAPI(url: string): Promise<MediaInfo> {
           url: pick.url || ''
         })) || [];
 
+      const title = data.text ? (data.text.length > 100 ? data.text.substring(0, 100) + '...' : data.text) : (firstPick?.title || 'Downloaded Media');
+
       return {
         success: true,
-        title: firstPick?.title || 'Downloaded Media',
+        title: title,
         thumbnail: firstPick?.thumb || '',
         url: firstPick?.url || '',
         ext: 'mp4',

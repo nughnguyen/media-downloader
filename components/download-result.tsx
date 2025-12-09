@@ -327,7 +327,8 @@ export default function DownloadResult({
                       transition={{ delay: index * 0.05 }}
                       className="relative aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-purple-500/50 transition-all duration-300 cursor-pointer group"
                       onClick={() => {
-                        const fileName = `${title.substring(0, 30)}_${index + 1}.${image.ext}`;
+                        const safeTitle = title.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+                        const fileName = `${safeTitle}_${index + 1}.${image.ext}`;
                         handleDownloadFile(image.url, fileName);
                       }}
                     >
@@ -353,7 +354,8 @@ export default function DownloadResult({
               </div>
             )}
 
-            {/* Table */}
+            {/* Table - Hide for images as requested */}
+            {selectedType !== 'image' && (
             <div className="bg-white/5 rounded-xl overflow-hidden border border-white/10">
               <table className="w-full">
                 <thead>
@@ -390,7 +392,8 @@ export default function DownloadResult({
                             <button
                               onClick={() => {
                                 const downloadUrl = format.url || url;
-                                const fileName = `${title.substring(0, 50)}.${format.ext}`;
+                                const safeTitle = title.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+                                const fileName = `${safeTitle}.${format.ext}`;
                                 handleDownloadFile(downloadUrl, fileName);
                               }}
                               className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-300 flex items-center gap-2 text-sm"
@@ -402,77 +405,17 @@ export default function DownloadResult({
                         </tr>
                       );
                     })
-                  ) : selectedType === 'image' && (images.length > 0 || thumbnail) ? (
-                    <>
-                      {/* TikTok Image Carousel */}
-                      {images.length > 0 ? (
-                        images.map((image, index) => (
-                          <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                            <td className="px-4 py-3 text-white/90">
-                              Image #{index + 1} ({image.width}x{image.height})
-                            </td>
-                            <td className="px-4 py-3 text-white/70">Auto</td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => {
-                                  const fileName = `${title.substring(0, 30)}_${index + 1}.${image.ext}`;
-                                  
-                                  // Try to download via fetch
-                                  fetch(image.url)
-                                    .then(response => response.blob())
-                                    .then(blob => {
-                                      const blobUrl = window.URL.createObjectURL(blob);
-                                      const link = document.createElement('a');
-                                      link.href = blobUrl;
-                                      link.download = fileName;
-                                      document.body.appendChild(link);
-                                      link.click();
-                                      document.body.removeChild(link);
-                                      window.URL.revokeObjectURL(blobUrl);
-                                    })
-                                    .catch(() => {
-                                      // Fallback: open in new tab
-                                      window.open(image.url, '_blank');
-                                    });
-                                }}
-                                className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-300 flex items-center gap-2 text-sm"
-                              >
-                                <Download className="h-4 w-4" />
-                                Download
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      ) : thumbnail ? (
-                        <tr className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                          <td className="px-4 py-3 text-white/90">Thumbnail Image</td>
-                          <td className="px-4 py-3 text-white/70">Auto</td>
-                          <td className="px-4 py-3">
-                            <button
-                              onClick={() => {
-                                if (thumbnail) {
-                                  window.open(thumbnail, '_blank');
-                                }
-                              }}
-                              className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-300 flex items-center gap-2 text-sm"
-                            >
-                              <Download className="h-4 w-4" />
-                              Download
-                            </button>
-                          </td>
-                        </tr>
-                      ) : null}
-                    </>
                   ) : (
                     <tr>
                       <td colSpan={3} className="px-4 py-8 text-center text-white/50 text-sm">
-                        Không có định dạng {selectedType === 'audio' ? 'âm thanh' : selectedType === 'image' ? 'hình ảnh' : 'video'} khả dụng
+                        Không có định dạng {selectedType === 'audio' ? 'âm thanh' : 'video'} khả dụng
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </div>
       </motion.div>
